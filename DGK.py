@@ -22,7 +22,7 @@ class DGKpubkey:
         self.t = t
 
     def raw_encrypt(self, plaintext, r_value=None):
-        """DGK encryption of a positive integer plaintext."""
+        
         if not isinstance(plaintext, int) and not isinstance(plaintext, type(mpz(1))):
             raise TypeError(f'Expected int type plaintext but got: {type(plaintext)}')
 
@@ -44,7 +44,7 @@ class DGKprivkey:
         self.pubkey = pubkey
 
     def raw_decrypt0(self, ciphertext):
-        """Return raw plaintext: 0 if c^v mod p == 1, else 1."""
+        
         c = powmod(ciphertext, self.v, self.p)
         return 0 if c == 1 else 1
 

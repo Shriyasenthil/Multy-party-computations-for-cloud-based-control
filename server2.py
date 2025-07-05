@@ -32,7 +32,7 @@ def get_enc_data(data):
 def main():
     print("Server2: Initializing...")
     privkey, pubkey = labhe.Init(512)
-    DGK_pubkey = DGK.DGKpubkey(123, 2, 3, 20)  # placeholder values
+    DGK_pubkey = DGK.DGKpubkey(123, 2, 3, 20)  
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     port = 10000
@@ -49,13 +49,11 @@ def main():
         enc_x0 = json.loads(enc_data.decode())
         print("Server2: Received encrypted x0:", enc_x0)
 
-        # Simulate comparison
         t_comp = [1 if i % 2 == 0 else 0 for i in range(len(enc_x0))]
         t_comp_json = json.dumps(t_comp)
         print("Server2: Sending t_comp:", t_comp)
         connection.sendall(struct.pack('>i', len(t_comp_json)) + t_comp_json.encode('utf-8'))
 
-        # Wait for OT messages
         print("Server2: Waiting for OT messages from Server1...")
         ot_raw = recv_size(connection)
         ot_pair = json.loads(ot_raw.decode())
@@ -64,7 +62,6 @@ def main():
         print("Server2: OT Message 0:", msg0)
         print("Server2: OT Message 1:", msg1)
 
-        # Select based on t_comp[0]
         selected = msg1 if t_comp[0] else msg0
         ct = labhe.Ciphertext(selected['label'], mpz(selected['ciphertext']))
         decrypted = labhe.D(privkey, ct)

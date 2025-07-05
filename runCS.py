@@ -3,11 +3,6 @@ import subprocess
 import time
 import sys
 
-"""
-Run the Model Predictive Control problem using Client-Server simulation.
-Based on: https://arxiv.org/pdf/1803.09891.pdf
-"""
-
 if __name__ == '__main__':
     try:
         print("Starting Server...", flush=True)

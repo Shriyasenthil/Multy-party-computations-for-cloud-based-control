@@ -1,4 +1,4 @@
-# genDGK.py
+
 from gmpy2 import mpz, mpz_urandomb, random_state, next_prime, powmod
 
 DEFAULT_KEYSIZE = 512
@@ -14,12 +14,9 @@ def getprimeover(bits):
 
 
 def keysDGK(n_length=DEFAULT_KEYSIZE, u_length=DEFAULT_MSGSIZE, t=DEFAULT_SECURITYSIZE):
-    """
-    Generate DGK keys.
-    Returns: p, q, u, vp, vq, fp, fq, g, h
-    """
-    u = getprimeover(u_length)      # small plaintext space prime
-    vp = getprimeover(t)            # prime such that g^vp ≡ 1 mod p
+    
+    u = getprimeover(u_length)      
+    vp = getprimeover(t)            
     vq = getprimeover(t)
     fp = getprimeover(t)
     fq = getprimeover(t)
@@ -36,16 +33,17 @@ def keysDGK(n_length=DEFAULT_KEYSIZE, u_length=DEFAULT_MSGSIZE, t=DEFAULT_SECURI
 
     n = p * q
 
-    # Generator g ∈ Z*_n with order u
+    
     while True:
         g = getprimeover(n_length)
         if powmod(g, u, p) != 1 and powmod(g, u, q) != 1:
             break
 
-    # Generator h ∈ Z*_n with order vp
+    
     while True:
         h = getprimeover(n_length)
         if powmod(h, vp, p) != 1 and powmod(h, vq, q) != 1:
             break
 
     return mpz(p), mpz(q), mpz(u), mpz(vp), mpz(vq), mpz(fp), mpz(fq), mpz(g), mpz(h)
+
