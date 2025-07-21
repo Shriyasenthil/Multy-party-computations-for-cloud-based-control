@@ -1,51 +1,88 @@
 import socket
-import struct
-import json
-import labhe
-from gmpy2 import mpz
+import pickle
+import threading
+from paillier import EncryptedNumber
 
-def recv_size(sock):
-    total_len = 0
-    total_data = []
-    size = struct.unpack('>i', sock.recv(4))[0]
-    while total_len < size:
-        packet = sock.recv(min(4096, size - total_len))
-        if not packet:
-            break
-        total_data.append(packet)
-        total_len += len(packet)
-    return b''.join(total_data)
+class Server1:
+    def __init__(self, host='localhost', port=8001):
+        self.host = host
+        self.port = port
+        self.server_socket = None
+        
+    def handle_client(self, client_socket, address):
+        #Handle incoming client connection
+        try:
+            print(f"Server1: Connection from {address}")
+            
+            # Receive data length
+            data_length = int.from_bytes(client_socket.recv(4), 'big')
+            
+            # Receive data
+            data = b''
+            while len(data) < data_length:
+                chunk = client_socket.recv(data_length - len(data))
+                if not chunk:
+                    break
+                data += chunk
+            
+            # Deserialize data
+            request = pickle.loads(data)
+            
+            print(f"Server1: Received encrypted value and gain k0 = {request['gain']}")
+            
+            # Extract components
+            public_key = request['public_key']
+            encrypted_value = request['encrypted_value']
+            gain = request['gain']
+            
+            # Perform homomorphic multiplication: k0 * x0
+            encrypted_result = encrypted_value * gain
+            
+            print(f"Server1: Computed k0 * x0 homomorphically")
+            
+            # Send result back to client
+            response = encrypted_result
+            serialized_response = pickle.dumps(response)
+            
+            client_socket.sendall(len(serialized_response).to_bytes(4, 'big'))
+            client_socket.sendall(serialized_response)
+            
+            print(f"Server1: Sent encrypted result back to client")
+            
+        except Exception as e:
+            print(f"Server1: Error handling client: {e}")
+        finally:
+            client_socket.close()
+    
+    def start(self):
+        #Start server
+        self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        
+        try:
+            self.server_socket.bind((self.host, self.port))
+            self.server_socket.listen(5)
+            print(f"Server1: Listening on {self.host}:{self.port}")
+            
+            while True:
+                client_socket, address = self.server_socket.accept()
+                
+                # Handle each client in separate thread
+                client_thread = threading.Thread(
+                    target=self.handle_client,
+                    args=(client_socket, address)
+                )
+                client_thread.daemon = True
+                client_thread.start()
+                
+        except KeyboardInterrupt:
+            print("\nServer1: Shutting down...")
+        except Exception as e:
+            print(f"Server1: Error: {e}")
+        finally:
+            if self.server_socket:
+                self.server_socket.close()
 
-def main():
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    port = 10001
-    sock.bind(('localhost', port))
-    sock.listen(1)
-    print(f"Server1: Listening on port {port}...")
-
-    connection, client_address = sock.accept()
-    print(f"Server1: Connection established with Client {client_address}")
-
-    enc_payload = recv_size(connection)
-    data = json.loads(enc_payload.decode())
-    ct = labhe.Ciphertext(data['label'], mpz(data['ciphertext']))
-
-    print("Server1: Received encrypted x0 from Client")
-    print("Server1: Connecting to Server2...")
-
-    sock2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock2.connect(('localhost', 10000))  # Server2 is listening here
-    sock2.sendall(struct.pack('>i', len(enc_payload)) + enc_payload)
-    print("Server1: Sent encrypted x0 to Server2")
-
-    result_len = struct.unpack('>i', sock2.recv(4))[0]
-    result = sock2.recv(result_len)
-    connection.sendall(result)
-    print("Server1: Forwarded result to Client")
-
-    connection.close()
-    sock2.close()
-    sock.close()
-
-if __name__ == '__main__':
-    main()
+if __name__ == "__main__":
+    server = Server1()
+    server.start()
